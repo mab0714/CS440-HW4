@@ -17,7 +17,7 @@ namespace Pong
         static double _paddleHeight = 0.0;
         static double _randomVelocityX = 0.0;
         static double _randomVelocityY = 0.0;
-        static double _learningRate = 0.0;
+        static int _learningConstant = 1;
         static double _discountFactor = 0.0;
         public static int DiscreteBoardX
         {
@@ -127,15 +127,15 @@ namespace Pong
             }
         }
 
-        public static double LearningRate
+        public static int LearningConstant
         {
             get
             {
-                return _learningRate;
+                return _learningConstant;
             }
             set
             {
-                _learningRate = value;
+                _learningConstant = value;
             }
         }
 
