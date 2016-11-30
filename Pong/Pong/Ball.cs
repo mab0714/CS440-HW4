@@ -103,23 +103,26 @@ namespace Pong
             double velX = this._velocityX;
             double velY = this._velocityY;
 
-            this._ballX = x + velX;
-            this._discreteBallX = getDiscreteBallX(this._discreteBoardX);
-
+            this._ballX = x + velX;           
             this._ballY = y + velY;
-            this._discreteBallY = getDiscreteBallY(this._discreteBoardY);
-
+            
             // Collision detection
             if (!_twoPlayers)
             {                
-                if (this._ballX < 0.1)  // ball is off the left edge of the screen
+                if (this._ballX < 0)  // ball is off the left edge of the screen
                 {
                     this._ballX = this._ballX * -1;
                     this._velocityX = this._velocityX * -1;
                 }
             }
-                                                   
-            if (this._ballY < 0.1)  // ball off the top of the screen
+
+            //if (this._ballX >= 1)
+            //{
+            //    this._ballX = 0.99;
+            //    this._discreteBallX = 11;
+            //}
+
+            if (this._ballY < 0)  // ball off the top of the screen
             {
                 this._ballY = this._ballY * -1;
                 this._velocityY = this._velocityY * -1;
@@ -131,16 +134,22 @@ namespace Pong
                 this._velocityY = this._velocityY * -1;
             }
 
+            this._discreteBallX = getDiscreteBallX(this._discreteBoardX);
+            this._discreteBallY = getDiscreteBallY(this._discreteBoardY);
+
+
         }        
 
         private int getDiscreteBallX(int boardX)
         {
-            this._discreteBallX = (Int32) Math.Round(Math.Floor(this.BallX * boardX), 0);
+            //this._discreteBallX = (Int32) Math.Round(Math.Floor(this.BallX * boardX), 0);
+            this._discreteBallX = (Int32)Math.Floor(boardX * (this.BallX - 0) / (1-0));
             return this._discreteBallX;
         }
         private int getDiscreteBallY(int boardY)
         {
-            this._discreteBallY = (Int32)Math.Round(Math.Floor(this.BallY * boardY), 0);
+            //this._discreteBallY = (Int32)Math.Round(Math.Floor(this.BallY * boardY), 0);
+            this._discreteBallY = (Int32)Math.Floor(boardY * (this.BallY - 0) / (1 - 0));
             return this._discreteBallY;
         }
 
@@ -150,7 +159,7 @@ namespace Pong
             {
                 this._discreteVelocityX = 1;
             }
-            if (this._velocityX < 0.03)
+            if (this._velocityX <= -0.03)
             {
                 this._discreteVelocityX = -1;
             }
@@ -159,21 +168,21 @@ namespace Pong
 
         private int getDiscreteVelocityY()
         {
-            if (this._discreteVelocityY < 0)
+            if (this._discreteVelocityY < -0.015)
             {
                 this._discreteVelocityY = -1;
-                if (this._discreteVelocityY < 0.015)
-                {
-                    this._discreteVelocityY = 0;
-                }
+                //if (this._discreteVelocityY < 0.015)
+                //{
+                //    this._discreteVelocityY = 0;
+                //}
             }
-            else if (this._discreteVelocityY > 0)
+            else if (this._discreteVelocityY > 0.015)
             {
                 this._discreteVelocityY = 1;
-                if (this._discreteVelocityY < 0.015)
-                {
-                    this._discreteVelocityY = 0;
-                }
+                //if (this._discreteVelocityY < 0.015)
+                //{
+                //    this._discreteVelocityY = 0;
+                //}
             }
             else
             {

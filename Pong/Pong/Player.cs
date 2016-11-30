@@ -16,13 +16,15 @@ namespace Pong
         private int _gamesPlayed;
         private int _gamesLost;
         private double _paddleHeight = 0.2;
-        //private Dictionary<Tuple<int, int, int, int, int, string>, double> _Q;
-        private Dictionary<Tuple<int, int, int, int, int>, double> _Q;
+        private Dictionary<Tuple<int, int, int, int, int, string>, double> _Q;
+        //private Dictionary<Tuple<int, int, int, int, int>, double> _Q;
         private Dictionary<Tuple<int, int, int, int, int, string>, int> _N;
         private Dictionary<Tuple<int, int, int, int, int>, string> currQ = new Dictionary<Tuple<int, int, int, int, int>, string>();
         private Dictionary<Tuple<int, int, int, int, int>, string> nextQ = new Dictionary<Tuple<int, int, int, int, int>, string>();
+        private Dictionary<string, int> nextAction = new Dictionary<string, int>();
+        private Dictionary<string, double> nextAction2 = new Dictionary<string, double>();
 
-
+        private int _totalTrialDeflections;
         Dictionary<string, double> moveDict = new Dictionary<string, double>();
 
         private double _learningConstant;  // alpha
@@ -51,8 +53,8 @@ namespace Pong
             this._deflections = 0;
             this._gamesPlayed = 0;
             this._gamesLost = 0;
-            //this._Q = new Dictionary<Tuple<int, int, int, int, int, string>, double>();
-            this._Q = new Dictionary<Tuple<int, int, int, int, int>, double>();
+            this._Q = new Dictionary<Tuple<int, int, int, int, int, string>, double>();
+            //this._Q = new Dictionary<Tuple<int, int, int, int, int>, double>();
             this._N = new Dictionary<Tuple<int, int, int, int, int, string>, int>();
         }
 
@@ -98,14 +100,28 @@ namespace Pong
             set { this._deflections = value; }
         }
 
+        public int TotalTrialDeflections
+        {
+            get { return this._totalTrialDeflections; }
+            set { this._totalTrialDeflections = value; }
+        }
+
+
         public string PrevAction
         {
             get { return this._prevAction; }
             set { this._prevAction = value; }
         }
 
-        //public Dictionary<Tuple<int, int, int, int, int, string>, double> Memory
-        public Dictionary<Tuple<int, int, int, int, int>, double> Memory
+        public int ExplorationLimit
+        {
+            get { return this._explorationLimit; }
+            set { this._explorationLimit = value; }
+        }
+
+
+        public Dictionary<Tuple<int, int, int, int, int, string>, double> Memory
+        //public Dictionary<Tuple<int, int, int, int, int>, double> Memory
         {
             get { return this._Q; }
             set { this._Q = value; }
@@ -117,22 +133,24 @@ namespace Pong
             {
                 this.PaddleY += 0.02;
             }
-            else if (this._paddleY > b.BallY) {
+            else if (this._paddleY > b.BallY)
+            {
                 this.PaddleY -= 0.02;
             }
-            else {
+            else
+            {
                 this.PaddleY = this.PaddleY;
             }
-            
+            this._discretePaddleY = getDiscretePaddleY();
         }
 
         public void MoveRightPaddle(Ball b)
         {
-            // Each time step, choose action using exploration/exploitation functoin
+            // Each time step, choose action using exploration/exploitation function
             string action = explorationFunction(b);
 
             // get successor state and perform TD Update
-            tdUpdate(b, action);
+            //tdUpdate(b, action);
 
 
             if (action.Equals("UP"))
@@ -148,11 +166,13 @@ namespace Pong
             else if (action.Equals("DOWN"))
             {
                 this._paddleY += 0.04;
+                this._discretePaddleY = getDiscretePaddleY();
+
                 if (this._paddleY > 1 - GlobalValues.PaddleHeight)
                 {
                     this._paddleY = 1 - GlobalValues.PaddleHeight;
+                    this._discretePaddleY = 11;
                 }
-                this._discretePaddleY = getDiscretePaddleY();
             }
             else
             {
@@ -177,18 +197,42 @@ namespace Pong
         private string explorationFunction(Ball b)
         {
 
-
             var discreteStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "UP");
             var discreteStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "DOWN");
             var discreteStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "HOLD");
-            
-            // To try things equally, use random value to pick action and see if it hasn't been explored too much
-            // Or get the action that has been explored the least
 
-            Dictionary<string, int> nextAction = new Dictionary<string, int>();
+            // To try things equally, use random value to pick action and see if it hasn't been explored too much
+            // Or get the action that has been explored the least]
+
+            // Make this part of player class instead of creating a new one...clear it out each time.
+            // Make it check the Q to see if converged to 1, then try other values.
+
+            nextAction.Clear();
             try
             {
-                nextAction.Add("UP", this._N[discreteStateTupleUp]);
+                //if (1 - this._Q[discreteStateTupleHold] < 0.1)
+                //{
+                //    ;
+                //}
+                //else
+                //{
+                    nextAction.Add("HOLD", this._N[discreteStateTupleHold]);
+                //}
+            }
+            catch
+            {
+                nextAction.Add("HOLD", 0);
+            }
+            try
+            {
+                //if (1 - this._Q[discreteStateTupleUp] < 0.1)
+                //{
+                //    ;
+                //}
+                //else
+                //{
+                    nextAction.Add("UP", this._N[discreteStateTupleUp]);
+                //}
             }
             catch
             {
@@ -196,27 +240,27 @@ namespace Pong
             }
             try
             {
-                nextAction.Add("DOWN", this._N[discreteStateTupleDown]);
+                //if (1 - this._Q[discreteStateTupleDown] < 0.1)
+                //{
+                //    ;
+                //}
+                //else
+                //{
+                    nextAction.Add("DOWN", this._N[discreteStateTupleDown]);
+                //}
             }
             catch
             {
                 nextAction.Add("DOWN", 0);
             }
-            try
-            {
-                nextAction.Add("HOLD", this._N[discreteStateTupleHold]);
-            }
-            catch
-            {
-                nextAction.Add("HOLD", 0);
-            }
+
 
             Dictionary<string, int> sortedNextAction = nextAction.OrderBy(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
 
-            if (sortedNextAction.First().Value < this._explorationLimit)
+            if (sortedNextAction.Count > 0 && sortedNextAction.First().Value < this._explorationLimit)
             {
                 var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, sortedNextAction.First().Key);
-                
+
                 try
                 {
                     this._N.Add(discreteStateTuple, 1);
@@ -244,38 +288,22 @@ namespace Pong
             ////if (Math.Round(this._paddleY, 2) - 0.04 > 0.08)
             ////{
             //// Explore Up/Down/Hold actions
-            //    try
+            //try
+            //{
+            //    if (this._N[discreteStateTupleUp] < this._explorationLimit)
             //    {
-            //        if (this._N[discreteStateTupleUp] < this._explorationLimit)
+            //        try
             //        {
-            //            try
-            //            {
-            //                this._N.Add(discreteStateTupleUp, 1);
-            //            }
-            //            catch
-            //            {
-            //                int tmpCount = this._N[discreteStateTupleUp];
-            //                this._N.Remove(discreteStateTupleUp);
-            //                this._N.Add(discreteStateTupleUp, tmpCount + 1);
-            //            }
-
-            //            //this._paddleY -= 0.04;
-            //            //if (this._paddleY < 0)
-            //            //{
-            //            //    this._paddleY = 0;
-            //            //}
-            //            //this._discretePaddleY = getDiscretePaddleY();
-
-            //            //updateQ(b, "UP");
-            //            return "UP";
+            //            this._N.Add(discreteStateTupleUp, 1);
             //        }
-            //    }
-            //    catch
-            //    {
-            //        this._N.Add(discreteStateTupleUp, 1);
+            //        catch
+            //        {
+            //            int tmpCount = this._N[discreteStateTupleUp];
+            //            this._N.Remove(discreteStateTupleUp);
+            //            this._N.Add(discreteStateTupleUp, tmpCount + 1);
+            //        }
 
             //        //this._paddleY -= 0.04;
-
             //        //if (this._paddleY < 0)
             //        //{
             //        //    this._paddleY = 0;
@@ -285,46 +313,62 @@ namespace Pong
             //        //updateQ(b, "UP");
             //        return "UP";
             //    }
+            //}
+            //catch
+            //{
+            //    this._N.Add(discreteStateTupleUp, 1);
+
+            //    //this._paddleY -= 0.04;
+
+            //    //if (this._paddleY < 0)
+            //    //{
+            //    //    this._paddleY = 0;
+            //    //}
+            //    //this._discretePaddleY = getDiscretePaddleY();
+
+            //    //updateQ(b, "UP");
+            //    return "UP";
+            //}
 
             ////}
             ////if (Math.Round(this._paddleY + 0.04, 2) <= 1 - GlobalValues.PaddleHeight+.06)
             ////{
-            //    try
+            //try
+            //{
+            //    if (this._N[discreteStateTupleDown] < this._explorationLimit)
             //    {
-            //        if (this._N[discreteStateTupleDown] < this._explorationLimit)
+            //        try
             //        {
-            //            try
-            //            {
-            //                this._N.Add(discreteStateTupleDown, 1);
-            //            }
-            //            catch
-            //            {
-            //                int tmpCount = this._N[discreteStateTupleDown];
-            //                this._N.Remove(discreteStateTupleDown);
-            //                this._N.Add(discreteStateTupleDown, tmpCount + 1);
-            //            }
-
-            //            //this._paddleY += 0.04;
-            //            //if (this._paddleY > 1-GlobalValues.PaddleHeight)
-            //            //{
-            //            //    this._paddleY = 1 - GlobalValues.PaddleHeight;
-            //            //}
-            //            //this._discretePaddleY = getDiscretePaddleY();
-
-            //            //updateQ(b, "DOWN");
-            //            return "DOWN";
+            //            this._N.Add(discreteStateTupleDown, 1);
             //        }
-            //    }
-            //    catch
-            //    {
-            //        this._N.Add(discreteStateTupleDown, 1);
+            //        catch
+            //        {
+            //            int tmpCount = this._N[discreteStateTupleDown];
+            //            this._N.Remove(discreteStateTupleDown);
+            //            this._N.Add(discreteStateTupleDown, tmpCount + 1);
+            //        }
 
             //        //this._paddleY += 0.04;
+            //        //if (this._paddleY > 1-GlobalValues.PaddleHeight)
+            //        //{
+            //        //    this._paddleY = 1 - GlobalValues.PaddleHeight;
+            //        //}
             //        //this._discretePaddleY = getDiscretePaddleY();
 
             //        //updateQ(b, "DOWN");
             //        return "DOWN";
             //    }
+            //}
+            //catch
+            //{
+            //    this._N.Add(discreteStateTupleDown, 1);
+
+            //    //this._paddleY += 0.04;
+            //    //this._discretePaddleY = getDiscretePaddleY();
+
+            //    //updateQ(b, "DOWN");
+            //    return "DOWN";
+            //}
             ////}
             //try
             //{
@@ -352,9 +396,16 @@ namespace Pong
             //}
 
             // Exploit based on Q  aka Greedy          
-            return chooseBasedOnQ(b);                
-            
+            return chooseBasedOnQ(b);
+
         }
+
+        //private string explorationFunction2(int stateActionPairCount)
+        //{
+
+        //    ;
+
+        //}
 
         private string chooseBasedOnQ(Ball b)
         {
@@ -363,40 +414,40 @@ namespace Pong
             double downQ;
             double holdQ;
 
-            //var discreteStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "UP");
-            //var discreteStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "DOWN");
-            //var discreteStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "HOLD");
+            var discreteStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "UP");
+            var discreteStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "DOWN");
+            var discreteStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, "HOLD");
 
-            double newPaddleY = this._paddleY;
-            int discreteNewPaddleY = this._discretePaddleY;
+            //double newPaddleY = this._paddleY;
+            //int discreteNewPaddleY = this._discretePaddleY;
 
-            newPaddleY -= 0.04;
-            if (newPaddleY < 0)
-            {
-                newPaddleY = 0;
-            }
-            discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
+            //newPaddleY -= 0.04;
+            //if (newPaddleY < 0)
+            //{
+            //    newPaddleY = 0;
+            //}
+            //discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
 
-            var discreteStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
+            //var discreteStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
 
-            newPaddleY = this._paddleY;
-            if (newPaddleY > 1 - GlobalValues.PaddleHeight)
-            {
-                newPaddleY = 1 - GlobalValues.PaddleHeight;
-            }
-            discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
+            //newPaddleY = this._paddleY;
+            //if (newPaddleY > 1 - GlobalValues.PaddleHeight)
+            //{
+            //    newPaddleY = 1 - GlobalValues.PaddleHeight;
+            //}
+            //discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
 
-            var discreteStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
+            //var discreteStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
 
-            var discreteStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY);
-            
+            //var discreteStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY);
+
             moveDict.Clear();
             this._Q.TryGetValue(discreteStateTupleUp, out upQ);
             moveDict.Add("UP", upQ);
             this._Q.TryGetValue(discreteStateTupleDown, out downQ);
-            moveDict.Add("DOWN", upQ);
+            moveDict.Add("DOWN", downQ);
             this._Q.TryGetValue(discreteStateTupleHold, out holdQ);
-            moveDict.Add("HOLD", upQ);
+            moveDict.Add("HOLD", holdQ);
 
             Dictionary<string, double> sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
 
@@ -461,8 +512,12 @@ namespace Pong
         {
             // Q(s,a)
             double currQVal = 0.0;
-            //var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, actionChosen);
-
+            var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, actionChosen);
+            //if (b.DiscreteBallX == 12)
+            //{
+            //    b.DiscreteBallX = 11;
+            //}
+            //var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY);
             //double newPaddleY = this._paddleY;
             //int discreteNewPaddleY = this._discretePaddleY;
 
@@ -475,22 +530,25 @@ namespace Pong
             //    }
             //    discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
 
-            //    var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
+            //    discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
             //}
             //else if (actionChosen.Equals("DOWN"))
             //{
             //    newPaddleY = this._paddleY;
+            //    newPaddleY += 0.04;
+            //    discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
+
             //    if (newPaddleY > 1 - GlobalValues.PaddleHeight)
             //    {
             //        newPaddleY = 1 - GlobalValues.PaddleHeight;
+            //        discreteNewPaddleY = 11;
             //    }
-            //    discreteNewPaddleY = (Int32)Math.Floor(this._boardY * newPaddleY / (1 - this._paddleHeight));
 
-            //    var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
+            //    discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY);
 
             //}
             // s
-            var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY);
+            //var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY);
 
             try
             {
@@ -501,28 +559,9 @@ namespace Pong
                 ;
             }
 
-            // R(s) Current Reward in initial state, regardless of action
-            int stateReward = 0;
-            if (b.BallX > this._paddleX)
-            {
-                // right player deflects it
-                // Calculate Y coordinate when ball is at the same level as the paddle
-                double yIntersect = b.VelocityY * b.BallX + b.BallY;
-
-                if (yIntersect <= this._paddleY + GlobalValues.PaddleHeight && yIntersect >= this._paddleY)
-                {
-                    stateReward = 1;
-                }
-                else
-                {
-                    stateReward = -1;
-                }
-
-            }
-
-            // Pretend to be in successor state 
-            Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, this._boardX, this._boardY, b.TwoPlayers);
-            nextBallState.MoveBall();
+            //// Pretend to be in successor state 
+            //Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, this._boardX, this._boardY, b.TwoPlayers);
+            //nextBallState.MoveBall();
 
             double newPaddleY = this._paddleY;
             int discreteNewPaddleY = this.DiscretePaddleY;
@@ -554,68 +593,120 @@ namespace Pong
 
             // s'
             //var discreteSuccessorStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, actionChosen);
-            var discreteSuccessorStateTuple = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNewPaddleY, actionChosen);
+            //var discreteSuccessorStateTuple = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNewPaddleY, actionChosen);
 
-            // Get max Action in successor state
-            double upQ;
-            double downQ;
-            double holdQ;
-
-            moveDict.Clear();
-            // Simulate Next Decision, get Max Q
-            // Q(s',a')
-
-            //var discreteNextStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "UP");
-            //this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
-            //moveDict.Add("UP", upQ);
-
-            //var discreteNextStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "DOWN");
-            //this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
-            //moveDict.Add("DOWN", downQ);
-
-            //var discreteNextStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "HOLD");
-            //this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
-            //moveDict.Add("HOLD", holdQ);
-
-            // Get Successor State actions by changing Y 
-            double nextPaddleY = newPaddleY;
-            int discreteNextPaddleY = discreteNewPaddleY;
-
-            // Get successor state UP action
-
-            nextPaddleY -= 0.04;
-            if (nextPaddleY < 0)
+            // R(s) Current Reward
+            int stateReward = 0;
+            double maxNextQValue = 0;
+            // Pretend to be in successor state 
+            Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, this._boardX, this._boardY, b.TwoPlayers);
+            nextBallState.MoveBall();
+            if (nextBallState.BallX > this._paddleX)
             {
-                nextPaddleY = 0;
-            }
-            discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
-            var discreteNextStateTupleUp = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
-            this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
-            moveDict.Add("UP", upQ);
+                // right player deflects it
+                // Calculate Y coordinate when ball is at the same level as the paddle
+                //double yIntersect = b.VelocityY * b.BallX + b.BallY;
+                double yIntersect = (nextBallState.VelocityY / nextBallState.VelocityX) * (-1 * nextBallState.VelocityX) + nextBallState.BallY;
 
-            // Get successor state DOWN action
-            nextPaddleY = newPaddleY;
-            nextPaddleY += 0.04;
-            if (nextPaddleY > 1 - GlobalValues.PaddleHeight)
+                if (yIntersect <= newPaddleY + GlobalValues.PaddleHeight && yIntersect >= newPaddleY)
+                //if (yIntersect <= newPaddleY + GlobalValues.PaddleHeight && yIntersect >= newPaddleY)
+                {
+                    stateReward = 1;
+                }
+                else
+                {
+                    stateReward = -1;
+                }
+
+            }
+
+            if (nextBallState.DiscreteBallX == this.DiscretePaddleX)
             {
-                nextPaddleY = 1 - GlobalValues.PaddleHeight;
+                if (nextBallState.DiscreteBallY == discreteNewPaddleY)
+                {
+                    stateReward = 1;
+                }
+                else
+                {
+                    stateReward = -1;
+                }
             }
-            discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
-            var discreteNextStateTupleDown = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
-            this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
-            moveDict.Add("DOWN", upQ);
+            else
+            {
+                stateReward = 0;
+            }
 
-            // Get successor state HOLD action
-            nextPaddleY = newPaddleY;
-            discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
-            var discreteNextStateTupleHold = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
-            this._Q.TryGetValue(discreteNextStateTupleHold, out downQ);
-            moveDict.Add("HOLD", upQ);
+            if (stateReward > -1)
+            {
+                // Get max Action in successor state
+                double upQ;
+                double downQ;
+                double holdQ;
 
-            Dictionary<string, double> sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
 
-            // MaxQ(s',a')
-            double maxNextQValue = sortedMoveDict.First().Value;
+                moveDict.Clear();
+                // Simulate Next Decision, get Max Q
+                // Q(s',a')
+
+                var discreteNextStateTupleUp = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "UP");
+                this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
+                moveDict.Add("UP", upQ);
+
+                var discreteNextStateTupleDown = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "DOWN");
+                this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
+                moveDict.Add("DOWN", downQ);
+
+                var discreteNextStateTupleHold = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, discreteNewPaddleY, "HOLD");
+                this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
+                moveDict.Add("HOLD", holdQ);
+
+                //// Get Successor State actions by changing Y 
+                //double nextPaddleY = newPaddleY;
+                //int discreteNextPaddleY = discreteNewPaddleY;
+
+                //// Get successor state UP action
+
+                //nextPaddleY -= 0.04;
+                //if (nextPaddleY < 0)
+                //{
+                //    nextPaddleY = 0;
+                //}
+                //discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
+                //var discreteNextStateTupleUp = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
+                //this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
+                //moveDict.Add("UP", upQ);
+
+                //// Get successor state DOWN action
+                //nextPaddleY = newPaddleY;
+                //nextPaddleY += 0.04;
+                //discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
+                //if (nextPaddleY > 1 - GlobalValues.PaddleHeight)
+                //{
+                //    nextPaddleY = 1 - GlobalValues.PaddleHeight;
+                //    discreteNextPaddleY = 11;
+                //}
+
+                //var discreteNextStateTupleDown = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
+                //this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
+                //moveDict.Add("DOWN", downQ);
+
+                //// Get successor state HOLD action
+                //nextPaddleY = newPaddleY;
+                //discreteNextPaddleY = (Int32)Math.Floor(this._boardY * nextPaddleY / (1 - this._paddleHeight));
+                //var discreteNextStateTupleHold = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, discreteNextPaddleY);
+                //this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
+                //moveDict.Add("HOLD", holdQ);
+
+                Dictionary<string, double> sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
+
+                // MaxQ(s',a')
+                maxNextQValue = sortedMoveDict.First().Value;
+            }
+
+            if (maxNextQValue > 0)
+            {
+                ;
+            }
 
             var discreteStateActionTuple = Tuple.Create(discreteStateTuple.Item1, discreteStateTuple.Item2, discreteStateTuple.Item3, discreteStateTuple.Item4, discreteStateTuple.Item5, actionChosen);
 
@@ -630,8 +721,7 @@ namespace Pong
             {
                 ;
             }
-
-            double decayedLearningRate = this._learningConstant/ (this._learningConstant + stateActionCount);
+            double decayedLearningRate = this._learningConstant / (this._learningConstant + stateActionCount);
 
             this._Q[discreteStateTuple] = currQVal + decayedLearningRate * (stateReward + _discountFactor * maxNextQValue - currQVal);
 
@@ -684,6 +774,600 @@ namespace Pong
 
         }
 
+        public void tdUpdate(Ball b, Tuple<int, int, int, int, int, int> prevState, Tuple<int, int, int, int, int, int> currState)
+        {
+            string actionChosen = "";
+            if (currState.Item6 > prevState.Item6)
+            {
+                actionChosen = "DOWN";
+            }
+            else if (currState.Item6 < prevState.Item6)
+            {
+                actionChosen = "UP";
+            }
+            else if (currState.Item6 == prevState.Item6)
+            {
+                actionChosen = "HOLD";
+            }
+            var discreteStateTuple = Tuple.Create(prevState.Item1, prevState.Item2, prevState.Item3, prevState.Item4, prevState.Item6, actionChosen);
+            var discreteNextStateTuple = Tuple.Create(currState.Item1, currState.Item2, currState.Item3, currState.Item4, currState.Item6, actionChosen);
+
+            // Q(s,a)
+            double currQVal = 0.0;
+
+            try
+            {
+                this._Q.TryGetValue(discreteStateTuple, out currQVal);
+            }
+            catch
+            {
+                ;
+            }
+
+            //// Pretend to be in successor state 
+            // R(s) Reward
+            int stateReward = 0;
+            double maxNextQValue = 0;
+
+            if (discreteStateTuple.Item1 == currState.Item5)
+            {
+                if (discreteStateTuple.Item2 == discreteNextStateTuple.Item5)
+                {
+                    stateReward = 1;
+                }
+                else
+                {
+                    stateReward = -1;
+                }
+            }
+            else
+            {
+                stateReward = 0;
+            }
+
+
+            if (stateReward > -1)
+            {
+                // Get max Action in successor state
+                double upQ;
+                double downQ;
+                double holdQ;
+
+
+                moveDict.Clear();
+                // Simulate Next Decision, get Max Q
+                // Q(s',a')
+
+                var discreteNextStateTupleUp = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "UP");
+                this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
+                moveDict.Add("UP", upQ);
+
+                var discreteNextStateTupleDown = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "DOWN");
+                this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
+                moveDict.Add("DOWN", downQ);
+
+                var discreteNextStateTupleHold = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "HOLD");
+                this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
+                moveDict.Add("HOLD", holdQ);
+
+                Dictionary<string, double> sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
+
+                // MaxQ(s',a')
+                maxNextQValue = sortedMoveDict.First().Value;
+            }
+
+            var discreteStateActionTuple = Tuple.Create(discreteStateTuple.Item1, discreteStateTuple.Item2, discreteStateTuple.Item3, discreteStateTuple.Item4, discreteStateTuple.Item5, actionChosen);
+
+            // Number of times seen this state/action pair
+            int stateActionCount = 0;
+
+            try
+            {
+                this._N.TryGetValue(discreteStateActionTuple, out stateActionCount);
+            }
+            catch
+            {
+                ;
+            }
+            double decayedLearningRate = this._learningConstant / (this._learningConstant + stateActionCount);
+
+            this._Q[discreteStateTuple] = currQVal + decayedLearningRate * (stateReward + _discountFactor * maxNextQValue - currQVal);
+
+        }
+        public void tdUpdate2(Ball b, Tuple<int, int, int, int, int, int> prevState, Tuple<int, int, int, int, int, int> currState)
+        {
+            string actionChosen = "";
+            if (currState.Item6 > prevState.Item6)
+            {
+                actionChosen = "DOWN";
+            }
+            else if (currState.Item6 < prevState.Item6)
+            {
+                actionChosen = "UP";
+            }
+            else if (currState.Item6 == prevState.Item6)
+            {
+                actionChosen = "HOLD";
+            }
+            //var discreteStateTuple = Tuple.Create(prevState.Item1, prevState.Item2, prevState.Item3, prevState.Item4, prevState.Item6, actionChosen);
+            //var discreteNextStateTuple = Tuple.Create(currState.Item1, currState.Item2, currState.Item3, currState.Item4, currState.Item6, actionChosen);
+            var discreteStateTuple = Tuple.Create(currState.Item1, currState.Item2, currState.Item3, currState.Item4, currState.Item6, actionChosen);
+
+            // Q(s,a)
+            double currQVal = 0.0;
+            
+            try
+            {
+                this._Q.TryGetValue(discreteStateTuple, out currQVal);
+            }
+            catch
+            {
+                ;
+            }
+
+            // Pretend to be in successor state 
+            // R(s) Reward
+
+            Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, this._boardX, this._boardY, b.TwoPlayers);
+
+            // Previous Discrete Values
+            int currDiscreteBallX = nextBallState.DiscreteBallX;
+            int currDiscreteBallY = nextBallState.DiscreteBallY;
+            int currDiscretePaddleX = this.DiscretePaddleX;
+            int currDiscretePaddleY = this.DiscretePaddleY;
+            int currDiscreteVelX = nextBallState.DiscreteVelocityX;
+            int currDiscreteVelY = nextBallState.DiscreteVelocityY;                       
+
+            int nextDiscreteBallX = nextBallState.DiscreteBallX;
+            int nextDiscreteBallY = nextBallState.DiscreteBallY;
+            int nextDiscretePaddleX = this.DiscretePaddleX;
+            int nextDiscretePaddleY = this.DiscretePaddleY;
+            int nextDiscreteVelX = nextBallState.DiscreteVelocityX;
+            int nextDiscreteVelY = nextBallState.DiscreteVelocityY;
+
+            int stateReward = 0;
+            while (currDiscreteBallX != nextDiscreteBallX ||
+                        currDiscreteBallY != nextDiscreteBallY ||
+                        currDiscretePaddleX != nextDiscretePaddleX ||
+                        currDiscretePaddleY != nextDiscretePaddleY ||
+                        currDiscreteVelX != nextDiscreteVelX ||
+                        currDiscreteVelY != nextDiscreteVelY)
+            {
+                nextBallState.MoveBall();
+
+                nextDiscreteBallX = nextBallState.DiscreteBallX;
+                nextDiscreteBallY = nextBallState.DiscreteBallY;
+                nextDiscreteVelX = nextBallState.DiscreteVelocityX;
+                nextDiscreteVelY = nextBallState.DiscreteVelocityY;
+
+                if (nextBallState.BallX > this._paddleX)
+                {
+                    // right player deflects it
+                    // Calculate Y coordinate when ball is at the same level as the paddle
+                    //double yIntersect = b.VelocityY * b.BallX + b.BallY;
+                    double yIntersect = (nextBallState.VelocityY / nextBallState.VelocityX) * (-1 * nextBallState.VelocityX) + nextBallState.BallY;
+
+                    if (yIntersect <= this._paddleY + GlobalValues.PaddleHeight && yIntersect >= this._paddleY)
+                    //if (yIntersect <= newPaddleY + GlobalValues.PaddleHeight && yIntersect >= newPaddleY)
+                    {
+                        stateReward = 1;
+                    }
+                    else
+                    {
+                        stateReward = -1;
+                    }
+
+                }
+            }
+
+            //stateReward = 0;
+            double maxNextQValue = 0;
+
+            //if (discreteStateTuple.Item1 == currState.Item5)
+            //{
+            //    if (discreteStateTuple.Item2 == discreteNextStateTuple.Item5)
+            //    {
+            //        stateReward = 1;
+            //    }
+            //    else
+            //    {
+            //        stateReward = -1;
+            //    }
+            //} 
+            //else
+            //{
+            //    stateReward = 0;
+            //}
+            var discreteNextStateTupleUp = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "UP");
+            var discreteNextStateTupleDown = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "DOWN");
+            var discreteNextStateTupleHold = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "HOLD");
+
+            Dictionary<string, double> sortedMoveDict = null;
+            if (stateReward > -1)
+            {
+                // Get max Action in successor state
+                double upQ;
+                double downQ;
+                double holdQ;
+
+
+                moveDict.Clear();
+                // Simulate Next Decision, get Max Q
+                // Q(s',a')
+
+                //var discreteNextStateTupleUp = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "UP");
+                discreteNextStateTupleUp = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "UP");
+                this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
+                moveDict.Add("UP", upQ);
+
+                //var discreteNextStateTupleDown = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "DOWN");
+                discreteNextStateTupleDown = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "DOWN");
+                this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
+                moveDict.Add("DOWN", downQ);
+
+                //var discreteNextStateTupleHold = Tuple.Create(discreteNextStateTuple.Item1, discreteNextStateTuple.Item2, discreteNextStateTuple.Item3, discreteNextStateTuple.Item4, discreteNextStateTuple.Item5, "HOLD");
+                discreteNextStateTupleHold = Tuple.Create(nextDiscreteBallX, nextDiscreteBallY, nextDiscreteVelX, nextDiscreteVelY, this.DiscretePaddleY, "HOLD");
+                this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
+                moveDict.Add("HOLD", holdQ);
+                
+                sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
+
+                // MaxQ(s',a')
+                maxNextQValue = sortedMoveDict.First().Value;
+            }
+            var discreteStateActionTuple = Tuple.Create(discreteStateTuple.Item1, discreteStateTuple.Item2, discreteStateTuple.Item3, discreteStateTuple.Item4, discreteStateTuple.Item5, actionChosen);
+
+            string newAction;
+            if (sortedMoveDict.First().Key.Equals("UP"))
+            {
+                discreteStateActionTuple = Tuple.Create(discreteNextStateTupleUp.Item1, discreteNextStateTupleUp.Item2, discreteNextStateTupleUp.Item3, discreteNextStateTupleUp.Item4, discreteNextStateTupleUp.Item5, discreteNextStateTupleUp.Item6);
+            }
+            else if (sortedMoveDict.First().Key.Equals("DOWN"))
+            {
+                discreteStateActionTuple = Tuple.Create(discreteNextStateTupleDown.Item1, discreteNextStateTupleDown.Item2, discreteNextStateTupleDown.Item3, discreteNextStateTupleDown.Item4, discreteNextStateTupleDown.Item5, discreteNextStateTupleDown.Item6);
+            }
+            else if (sortedMoveDict.First().Key.Equals("HOLD"))
+            {
+                discreteStateActionTuple = Tuple.Create(discreteNextStateTupleHold.Item1, discreteNextStateTupleHold.Item2, discreteNextStateTupleHold.Item3, discreteNextStateTupleHold.Item4, discreteNextStateTupleHold.Item5, discreteNextStateTupleHold.Item6);
+            }
+
+            // Number of times seen this state/action pair
+            int stateActionCount = 0;
+
+            try
+            {
+                this._N.TryGetValue(discreteStateActionTuple, out stateActionCount);
+            }
+            catch
+            {
+                ;
+            }
+            double optimisticReward = -2.0;
+            if (stateActionCount < this.ExplorationLimit)
+            {
+                optimisticReward = 0.5;
+            }
+
+            maxNextQValue = Math.Max(maxNextQValue, optimisticReward);
+
+            double decayedLearningRate = this._learningConstant / (this._learningConstant + stateActionCount);
+
+            this._Q[discreteStateTuple] = currQVal + decayedLearningRate * (stateReward + _discountFactor * maxNextQValue - currQVal);          
+
+        }
+
+        public void tdUpdate3(Ball b, Tuple<double, double, double, double, double> prevState, Tuple<double, double, double, double, double> currState)
+        {
+            string actionChosen = "";
+            if (currState.Item5 > prevState.Item5)
+            {
+                actionChosen = "DOWN";
+            }
+            else if (currState.Item5 < prevState.Item5)
+            {
+                actionChosen = "UP";
+            }
+            else if (currState.Item5 == prevState.Item5)
+            {
+                actionChosen = "HOLD";
+            }
+            //var discreteStateTuple = Tuple.Create(prevState.Item1, prevState.Item2, prevState.Item3, prevState.Item4, prevState.Item6, actionChosen);
+            //var discreteNextStateTuple = Tuple.Create(currState.Item1, currState.Item2, currState.Item3, currState.Item4, currState.Item6, actionChosen);
+            var discreteStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, actionChosen);
+
+            // Q(s,a)
+            double currQVal = 0.0;
+
+            int stateActionCount = 0;
+
+            // Get learning rate for this state
+            try
+            {
+                this._Q.TryGetValue(discreteStateTuple, out currQVal);
+            }
+            catch
+            {
+                ;
+            }
+
+            try
+            {
+                this._N.TryGetValue(discreteStateTuple, out stateActionCount);
+            }
+            catch
+            {
+                ;
+            } 
+            double decayedLearningRate = this._learningConstant / (this._learningConstant + stateActionCount);
+
+
+            // Pretend to be in successor state 
+            // R(s) Reward
+            Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, this._boardX, this._boardY, b.TwoPlayers);
+            nextBallState.MoveBall();
+            int stateReward = 0;
+            if (nextBallState.BallX > this._paddleX)
+            {
+                // right player deflects it
+                // Calculate Y coordinate when ball is at the same level as the paddle
+                //double yIntersect = b.VelocityY * b.BallX + b.BallY;
+                double yIntersect = (nextBallState.VelocityY / nextBallState.VelocityX) * (-1 * nextBallState.VelocityX) + nextBallState.BallY;
+
+                if (yIntersect <= this._paddleY + GlobalValues.PaddleHeight && yIntersect >= this._paddleY)
+                //if (yIntersect <= newPaddleY + GlobalValues.PaddleHeight && yIntersect >= newPaddleY)
+                {
+                    stateReward = 1;
+                }
+                else
+                {
+                    stateReward = -1;
+                }
+
+            }
+
+            if (nextBallState.BallX >= 1)
+            {
+                nextBallState.BallX = 0.99;
+                nextBallState.DiscreteBallX = 11;
+            }
+
+
+            // Explore by getting max a' Q(s',a')
+            // Use f(Q,n), where Q is the highest value  of any action in this next state.  n return some hardcoded , optimistic reward for each state if we didn't explore each state enough
+            double maxNextQValue = 0;
+
+
+            // TODO: if defection happens, does direction of the velocity in X direction change?
+            if (stateReward == 1)
+            {
+                nextBallState.DiscreteVelocityX = nextBallState.DiscreteVelocityX * -1;
+            }
+            var discreteNextStateTupleUp = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "UP");
+            var discreteNextStateTupleDown = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "DOWN");
+            var discreteNextStateTupleHold = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "HOLD");
+
+            Dictionary<string, double> sortedMoveDict = null;
+            string newAction = "";
+
+            // if state reward = -1, then max a' Q(s',a') is 0
+            if (stateReward > -1)
+            {
+                // Get max Action in successor state
+                double upQ;
+                double downQ;
+                double holdQ;
+
+
+                moveDict.Clear();
+                // Simulate Next Decision, get Max Q
+                // Q(s',a')
+
+                //if (this._paddleY < 0)
+                //{
+                    // Can go up
+                    //discreteNextStateTupleUp = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "UP");
+
+                    this._Q.TryGetValue(discreteNextStateTupleUp, out upQ);
+                    moveDict.Add("UP", upQ);
+                //}
+
+                //if (this._paddleY > 1 - GlobalValues.PaddleHeight)
+                //{
+                    // Can go down
+                    //discreteNextStateTupleDown = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "DOWN");
+                    this._Q.TryGetValue(discreteNextStateTupleDown, out downQ);
+                    moveDict.Add("DOWN", downQ);
+                //}
+
+                //discreteNextStateTupleHold = Tuple.Create(nextBallState.DiscreteBallX, nextBallState.DiscreteBallY, nextBallState.DiscreteVelocityX, nextBallState.DiscreteVelocityY, this.DiscretePaddleY, "HOLD");
+                this._Q.TryGetValue(discreteNextStateTupleHold, out holdQ);
+                moveDict.Add("HOLD", holdQ);
+
+                sortedMoveDict = moveDict.OrderByDescending(v => v.Value).ToDictionary(x => x.Key, x => x.Value);
+
+                // MaxQ(s',a')
+                maxNextQValue = sortedMoveDict.First().Value;
+
+                
+                var discreteNextStateActionTuple = Tuple.Create(discreteStateTuple.Item1, discreteStateTuple.Item2, discreteStateTuple.Item3, discreteStateTuple.Item4, discreteStateTuple.Item5, actionChosen);
+                        
+                // Number of times taken action a' in state s
+                int stateActionCountUp = 0;
+                int stateActionCountDown = 0;
+                int stateActionCountHold = 0;
+                if (sortedMoveDict.First().Key.Equals("UP"))
+                {
+                    discreteNextStateActionTuple = Tuple.Create(discreteNextStateTupleUp.Item1, discreteNextStateTupleUp.Item2, discreteNextStateTupleUp.Item3, discreteNextStateTupleUp.Item4, discreteNextStateTupleUp.Item5, discreteNextStateTupleUp.Item6);
+                    try
+                    {
+                        this._N.TryGetValue(discreteNextStateTupleUp, out stateActionCountUp);
+                    }
+                    catch
+                    {
+                        ;
+                    }
+                }
+                else if (sortedMoveDict.First().Key.Equals("DOWN"))
+                {
+                    discreteNextStateActionTuple = Tuple.Create(discreteNextStateTupleDown.Item1, discreteNextStateTupleDown.Item2, discreteNextStateTupleDown.Item3, discreteNextStateTupleDown.Item4, discreteNextStateTupleDown.Item5, discreteNextStateTupleDown.Item6);
+                    try
+                    {
+                        this._N.TryGetValue(discreteNextStateTupleDown, out stateActionCountDown);
+                    }
+                    catch
+                    {
+                        ;
+                    }
+                }
+                else if (sortedMoveDict.First().Key.Equals("HOLD"))
+                {
+                    discreteNextStateActionTuple = Tuple.Create(discreteNextStateTupleHold.Item1, discreteNextStateTupleHold.Item2, discreteNextStateTupleHold.Item3, discreteNextStateTupleHold.Item4, discreteNextStateTupleHold.Item5, discreteNextStateTupleHold.Item6);
+                    try
+                    {
+                        this._N.TryGetValue(discreteNextStateTupleHold, out stateActionCountHold);
+                    }
+                    catch
+                    {
+                        ;
+                    }            
+                }
+
+                nextAction2.Clear();
+
+                // each action
+                double optimisticRewardUp = -2.0;
+                double optimisticRewardDown = -2.0;
+                double optimisticRewardHold = -2.0;
+                if (stateActionCountUp < this.ExplorationLimit)
+                {
+                    try 
+                    {
+                        //if (this._Q[discreteNextStateActionTuple] > 0)
+                        //{
+                            optimisticRewardUp = 0.83;
+                            nextAction2.Add("UP", optimisticRewardUp);
+                        //}
+                    }
+                    catch
+                    {
+                        optimisticRewardUp = 0.83;
+                        nextAction2.Add("UP", optimisticRewardUp);
+                    }
+                    
+
+                }
+                if (stateActionCountDown < this.ExplorationLimit)
+                {
+                    try
+                    {
+                        //if (this._Q[discreteNextStateActionTuple] > 0)
+                        //{
+                            optimisticRewardDown = 0.82;
+                            nextAction2.Add("DOWN", optimisticRewardDown);
+                        //}
+                    }
+                    catch
+                    {
+                        optimisticRewardDown = 0.82;
+                        nextAction2.Add("DOWN", optimisticRewardDown);
+                    }
+                }
+                if (stateActionCountHold < this.ExplorationLimit)
+                {
+                    try
+                    {
+                        //if (this._Q[discreteNextStateActionTuple] > 0)
+                        //{
+                            optimisticRewardHold = 0.81;
+                            nextAction2.Add("HOLD", optimisticRewardHold);
+                        //}
+                    }
+                    catch
+                    {
+                        optimisticRewardHold = 0.81;
+                        nextAction2.Add("HOLD", optimisticRewardHold);
+                    }
+                }
+                // TODO: What if nextAction2 is empty?  default value
+                if (nextAction2.Count > 0)
+                {
+                    maxNextQValue = Math.Max(maxNextQValue, nextAction2.OrderByDescending(v => v.Value).First().Value);
+                }                
+
+                if (maxNextQValue == optimisticRewardUp)
+                {
+                    newAction = "UP";
+                    //stateActionCount = stateActionCountUp;
+                }
+                else if (maxNextQValue == optimisticRewardDown)
+                {
+                    newAction = "DOWN";
+                    //stateActionCount = stateActionCountDown;
+                }
+                else if (maxNextQValue == optimisticRewardHold)
+                {
+                    newAction = "HOLD";
+                    //stateActionCount = stateActionCountHold;
+                }
+                else
+                {
+                    newAction = sortedMoveDict.First().Key;                
+                }
+
+                // Update Action taken
+                // Update discreteStateTuple with new Action.
+
+                var discreteNextStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, this.DiscretePaddleY, newAction);
+                try
+                {
+                    this._N.Add(discreteNextStateTuple, 1);
+                }
+                catch
+                {
+                    int tmpCount = this._N[discreteNextStateTuple];
+                    this._N.Remove(discreteNextStateTuple);
+                    this._N.Add(discreteNextStateTuple, tmpCount + 1);
+                }
+
+                if (stateReward > -1)
+                {
+                    if (newAction.Equals("UP"))
+                    {
+
+                        this._paddleY -= 0.04;
+                        if (this._paddleY < 0)
+                        {
+                            this._paddleY = 0;
+                        }
+                        this._discretePaddleY = getDiscretePaddleY();
+                        this._prevAction = "UP";
+                    }
+                    else if (newAction.Equals("DOWN"))
+                    {
+                        this._paddleY += 0.04;
+                        this._discretePaddleY = getDiscretePaddleY();
+
+                        if (this._paddleY > 1 - GlobalValues.PaddleHeight)
+                        {
+                            this._paddleY = 1 - GlobalValues.PaddleHeight;
+                            this._discretePaddleY = 11;
+                        }
+                        this._prevAction = "DOWN";
+                    }
+                    else
+                    {
+                        // HOLD
+                        // Do Nothing
+                        this._prevAction = "HOLD";
+                    }
+                }
+            }
+
+
+            this._Q[discreteStateTuple] = currQVal + decayedLearningRate * (stateReward + _discountFactor * maxNextQValue - currQVal); 
+
+        }
+
         //public void updateQ(Ball b, string actionChosen, Player rP, Player lP, int boardX, int boardY, double paddleHeight, double learningRate, double discountFactor)
         //{
 
@@ -691,10 +1375,10 @@ namespace Pong
 
         //    Ball nextBallState = new Pong.Ball(b.BallX, b.BallY, b.VelocityX, b.VelocityY, boardX, boardY, b.TwoPlayers);
         //    nextBallState.MoveBall();
-        
+
         //    var discreteNextStateTuple = Tuple.Create(b.DiscreteBallX, b.DiscreteBallY, b.DiscreteVelocityX, b.DiscreteVelocityY, rP.DiscretePaddleY, actionChosen);
 
-          
+
         //    int stateReward = 0;
 
         //    if (b.BallX == rP.PaddleX)
@@ -743,13 +1427,14 @@ namespace Pong
 
         public int getDiscretePaddleX()
         {
-            this._discretePaddleX = (Int32)this._paddleX * this._boardX;
+            //this._discretePaddleX = (Int32)this._paddleX * this._boardX;
+            this._discretePaddleX = (Int32)Math.Floor(this._boardX * (this._paddleX - 0) / (1 - 0));
             return this._discretePaddleX;
         }
 
         public int getDiscretePaddleY()
         {
-            this._discretePaddleY = (Int32)Math.Floor(this._boardY*this._paddleY/(1-this._paddleHeight));
+            this._discretePaddleY = (Int32)Math.Floor(this._boardY * this._paddleY / (1 - this._paddleHeight));
             return this._discretePaddleY;
         }
 
@@ -757,7 +1442,7 @@ namespace Pong
         {
             this._discretePaddleY = (Int32)Math.Floor(this._boardY * nextY / (1 - this._paddleHeight));
             return this._discretePaddleY;
-        }   
+        }
 
         public void addDeflection()
         {
