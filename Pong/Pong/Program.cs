@@ -12,8 +12,8 @@ namespace Pong
     {
         static void Main(string[] args)
         {
-            GlobalValues.DiscreteBoardX = 12;
-            GlobalValues.DiscreteBoardY = 12;
+            GlobalValues.DiscreteBoardX = 10;
+            GlobalValues.DiscreteBoardY = 10;
             GlobalValues.InitialBallX = 0.5;
             GlobalValues.InitialBallY = 0.5;
             GlobalValues.InitialVelocityX = 0.03;
@@ -33,25 +33,39 @@ namespace Pong
             //double randomVelX = 0.015;
             //double randomVelY = 0.03;
 
-            int totalTrials = 600000;
+            int totalTrials = 100000;
             double learningConstant = 30; //30
             double discountFactor = .9;  //.4
-            int explorationLimit = 1; //300
+            int explorationLimit = 15; //300
 
             Ball initialBall = new Ball(GlobalValues.InitialBallX, GlobalValues.InitialBallY, GlobalValues.InitialVelocityX, GlobalValues.InitialVelocityY, GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, false);
             Player rP = new Player(1, 0.5 - (GlobalValues.PaddleHeight / 2), learningConstant, discountFactor, Tuple.Create(initialBall.DiscreteBallX, initialBall.DiscreteBallY, initialBall.DiscreteVelocityX, initialBall.DiscreteVelocityY, (int)Math.Floor(GlobalValues.DiscreteBoardY * (0.5 - (GlobalValues.PaddleHeight / 2)) / (1 - GlobalValues.PaddleHeight))), GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, explorationLimit);
 
-            //rP.Memory = ReadQ(@"C:\Users\mabiscoc\Documents\Visual Studio 2013\Projects\SaveDictionary\SaveDictionary\Q.txt");
-            //rP.MemoryVisited = ReadN(@"C:\Users\mabiscoc\Documents\Visual Studio 2013\Projects\SaveDictionary\SaveDictionary\N.txt");
+            //rP.Memory = ReadQ(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Q_J.txt");
+
+
+            //rP.MemoryVisited = ReadN(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\N_J.txt");
+            //double test = 1.0;
+            //try
+            //{
+            //    var tuple = Tuple.Create(6,6,1,0,6,"N/A");
+            //    rP.Memory.TryGetValue(tuple, out test);
+            //}
+            //catch
+            //{
+            //    ;
+            //}
 
             int maxDeflections = 0;
             int totalTrialLength = 0;
+            List<int> last10 = new List<int>();
 
             DateTime start = DateTime.Now;
             for (int numTrial = 0; numTrial < totalTrials; numTrial++)
             {
-                Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q.txt");
-                Write(rP.MemoryVisited, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\N.txt");
+                ////Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q.txt", numTrial, rP.TotalTrialDeflections, rP.GamesPlayed);
+                //Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q2.txt");
+                //Write(rP.MemoryVisited, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\N2.txt");
 
                 // initial state of the ball
                 Ball b = new Ball(GlobalValues.InitialBallX, GlobalValues.InitialBallY, GlobalValues.InitialVelocityX, GlobalValues.InitialVelocityY, GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, false);
@@ -85,7 +99,7 @@ namespace Pong
                     b.MoveBall();
                     currentStateTuple = Tuple.Create(b.BallX, b.BallY, b.VelocityX, b.VelocityY, rP.PaddleY);
 
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
                     if (goalState(currentStateTuple, rP, null))
                     {
                         if (deflectionDetected(currentStateTuple, prevStateTuple, rP, null, b))
@@ -162,7 +176,7 @@ namespace Pong
                     }
 
                     // Draw Board
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
 
                     //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial);
                     // Right Player Makes Decision
@@ -172,7 +186,7 @@ namespace Pong
                     //b.MoveBall();
 
                     rP.MoveRightPaddle(b);
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
 
                     rP.tdUpdate3(b, prevStateTuple, currentStateTuple);
 
@@ -210,6 +224,18 @@ namespace Pong
                 {
                     maxDeflections = rP.Deflections;
                 }
+                try
+                {
+                    if (last10.Count >= 10)
+                    {
+                        last10.RemoveAt(0);
+                    }
+                    last10.Add(rP.Deflections);
+                }
+                catch
+                {
+                    last10.Add(rP.Deflections);
+                }
                 totalTrialLength = totalTrialLength + trialIterations;
                 rP.TotalTrialDeflections = rP.TotalTrialDeflections + rP.Deflections;
                 Console.WriteLine("*********************************");
@@ -217,6 +243,8 @@ namespace Pong
                 Console.WriteLine("Trial Length: " + trialIterations);
                 Console.WriteLine("Number of deflections: " + rP.Deflections);
                 Console.WriteLine("Avg Trial number of deflections: " + (double)rP.TotalTrialDeflections / rP.GamesPlayed);
+                Console.WriteLine("Last 10 Avg Trial number of deflections: " + (double)last10.Average());
+
                 Console.WriteLine("Avg Trial length: " + (double)totalTrialLength / rP.GamesPlayed);
                 if ((double)rP.TotalTrialDeflections / rP.GamesPlayed > 9)
                 {
@@ -240,14 +268,14 @@ namespace Pong
             } while (Console.ReadKey().KeyChar != 'p');
 
 
-            int totalGames = 10;
+            int totalGames = 1000;
             //double learningConstant = 5;
             //double discountFactor = .9;
             maxDeflections = 0;
 
             Dictionary<int, int> gameDeflections = new Dictionary<int, int>();
             rP.Deflections = 0;
-            rP.ExplorationLimit = 1;
+            rP.ExplorationLimit = 0;
             DateTime startGame = DateTime.Now;
             for (int numGame = 0; numGame < totalGames; numGame++)
             {
@@ -274,7 +302,7 @@ namespace Pong
                     b.MoveBall();
                     currentStateTuple = Tuple.Create(b.BallX, b.BallY, b.VelocityX, b.VelocityY, rP.PaddleY);
 
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
 
                     if (goalState(currentStateTuple, rP, null))
                     {
@@ -343,10 +371,10 @@ namespace Pong
                         }
                     }
                     // Draw Board
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
 
                     rP.MoveRightPaddle(b);
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numGame, gameIterations);
 
                     rP.tdUpdate3(b, prevStateTuple, currentStateTuple);
 
@@ -393,7 +421,7 @@ namespace Pong
             rP.GamesLost = 0;
             rP.GamesPlayed = 0;
             rP.Deflections = 0;
-            rP.ExplorationLimit = 1;
+            rP.ExplorationLimit = 0;
 
             Player lP = new Player(0, 0.5 - (GlobalValues.PaddleHeight / 2), learningConstant, discountFactor, Tuple.Create(initialBall.DiscreteBallX, initialBall.DiscreteBallY, initialBall.DiscreteVelocityX, initialBall.DiscreteVelocityY, (int)Math.Floor(GlobalValues.DiscreteBoardY * (0.5 - (GlobalValues.PaddleHeight / 2)) / (1 - GlobalValues.PaddleHeight))), GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, explorationLimit);
 
@@ -572,12 +600,12 @@ namespace Pong
         static bool deflectionDetected(Tuple<double, double, double, double, double> currState, Tuple<double, double, double, double, double> prevState, Player rP, Player lP, Ball b)
         {
             // right player deflects it
-            if (prevState.Item1 < rP.PaddleX && currState.Item1 >= rP.PaddleX)
+            if (prevState.Item1 <= rP.PaddleX && currState.Item1 >= rP.PaddleX)
             {
                 // Calculate Y coordinate when ball is at the same level as the paddle
                 //double yIntersect = currState.Item4 * prevState.Item1 + prevState.Item2;
                 double yIntersect = (b.VelocityY / b.VelocityX) * (-1 * b.VelocityX) + b.BallY;
-
+                yIntersect = (currState.Item4 / currState.Item3) * (-1 * currState.Item3) + currState.Item2;
                 if (yIntersect <= rP.PaddleY + GlobalValues.PaddleHeight && yIntersect >= rP.PaddleY)
                 {
                     rP.addDeflection();
@@ -586,22 +614,47 @@ namespace Pong
                     //rP.updateQ(b, rP.PrevAction, rP, lP, GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, GlobalValues.PaddleHeight, GlobalValues.LearningRate, GlobalValues.DiscountFactor);
                     return true;
                 }
+
+                //if (currState.Item4 > 0)
+                //{
+
+                //    yIntersect = (currState.Item2 - prevState.Item2) * ((1 - prevState.Item1) / (currState.Item1 - prevState.Item1)) + prevState.Item2;
+                //    if (yIntersect <= rP.PaddleY + GlobalValues.PaddleHeight && yIntersect >= rP.PaddleY)
+                //    {
+                //        rP.addDeflection();
+                //        return true;
+                //    }
+
+                //}
+                //else
+                //{
+                //    ;
+                //    yIntersect = (currState.Item2 - prevState.Item2) * ((1 - prevState.Item1) / (currState.Item1 - prevState.Item1)) + prevState.Item2;
+                //    if (yIntersect <= rP.PaddleY + GlobalValues.PaddleHeight && yIntersect >= rP.PaddleY)
+                //    {
+                //        rP.addDeflection();
+                //        return true;
+                //    }
+
+                //}
             }
 
             if (lP != null)
             {
                 // left player deflects it
-                if (prevState.Item1 < lP.PaddleX && currState.Item1 >= lP.PaddleX)
+                if (prevState.Item1 >= lP.PaddleX && currState.Item1 <= lP.PaddleX)
                 {
                     // Calculate Y coordinate when ball is at the same level as the paddle
                     //double yIntersect = currState.Item4 * prevState.Item1 + prevState.Item2;
-                    double yIntersect = (b.VelocityY / b.VelocityX) * (-1 * b.VelocityX) + b.BallY;
+                    double yIntersect = (b.VelocityY / b.VelocityX) * (b.VelocityX) + b.BallY;
+                    yIntersect = (currState.Item4 / currState.Item3) * (-1 * currState.Item3) + currState.Item2;
 
-                    if (yIntersect >= lP.PaddleY - 0.2 && yIntersect <= lP.PaddleY)
+                    if (yIntersect <= lP.PaddleY + GlobalValues.PaddleHeight && yIntersect >= lP.PaddleY)
                     {
                         lP.addDeflection();
                         return true;
-                    }
+                    }                   
+               
                 }
             }
             return false;
@@ -638,15 +691,16 @@ namespace Pong
                     }
                     else
                     {
-                        if (x == lPlayer.DiscretePaddleX && y == lPlayer.DiscretePaddleY)
-                        {
-                            Console.Write("|");
-                        }
-
                         if (x == b.DiscreteBallX && y == b.DiscreteBallY && x == lPlayer.DiscretePaddleX && y == lPlayer.DiscretePaddleY)
                         {
                             Console.Write("X");
                         }
+                        else if (x == lPlayer.DiscretePaddleX && y == lPlayer.DiscretePaddleY)
+                        {
+                            Console.Write("|");
+                        }
+
+                        
                     }
 
                     //if (x == b.DiscreteBallX - 1 && y == b.DiscreteBallY && x == rPlayer.DiscretePaddleX - 1 && y == rPlayer.DiscretePaddleY)
@@ -682,18 +736,25 @@ namespace Pong
             Console.WriteLine("Number of Agent Deflections: " + rPlayer.Deflections);
         }
 
+        //static void Write(Dictionary<Tuple<int, int, int, int, int, string>, double> dictionary, string file, int numTrial, int totalDeflections, int gamesPlayed)
         static void Write(Dictionary<Tuple<int, int, int, int, int, string>, double> dictionary, string file)
         {
-            using (StreamWriter f = new StreamWriter(file))
+            using (StreamWriter f = new StreamWriter(file, false))
+            {
+                //f.WriteLine("numTrial" + numTrial);
+                //f.WriteLine("totalDeflections" + totalDeflections);
+                //f.WriteLine("gamesPlayed" + gamesPlayed);
+
                 foreach (var entry in dictionary)
                 {
                     f.WriteLine("{0} {1}", entry.Key, entry.Value);
                 }
+            }
         }
 
         static void Write(Dictionary<Tuple<int, int, int, int, int, string>, int> dictionary, string file)
         {
-            using (StreamWriter f = new StreamWriter(file))
+            using (StreamWriter f = new StreamWriter(file,false))
                 foreach (var entry in dictionary)
                 {
                     f.WriteLine("{0} {1}", entry.Key, entry.Value);

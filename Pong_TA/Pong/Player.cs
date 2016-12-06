@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Pong
 {
@@ -55,7 +56,41 @@ namespace Pong
             this._gamesLost = 0;
             this._Q = new Dictionary<Tuple<int, int, int, int, int, string>, double>();
             //this._Q = new Dictionary<Tuple<int, int, int, int, int>, double>();
+
+            using (var sr = new StreamReader(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Q_J.txt"))
+            {
+                string line = null;
+
+                // while it reads a key
+                while ((line = sr.ReadLine()) != null)
+                {
+                    string tuple = line.Split(')')[0].Trim('(');
+                    double value = Double.Parse(line.Split(')')[1]);
+
+                    Tuple<int, int, int, int, int, string> newTuple = Tuple.Create(Int32.Parse(tuple.Split(' ')[0].Trim(',')), Int32.Parse(tuple.Split(' ')[1].Trim(',')), Int32.Parse(tuple.Split(' ')[2].Trim(',')), Int32.Parse(tuple.Split(' ')[3].Trim(',')), Int32.Parse(tuple.Split(' ')[4].Trim(',')), tuple.Split(' ')[5].ToString().Trim());
+                    this._Q.Add(newTuple, value);
+                    //d.Add(line, sr.ReadLine());
+                }
+            }
             this._N = new Dictionary<Tuple<int, int, int, int, int, string>, int>();
+
+            using (var sr = new StreamReader(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\N_J.txt"))
+            {
+                string line = null;
+
+                // while it reads a key
+                while ((line = sr.ReadLine()) != null)
+                {
+                    string tuple = line.Split(')')[0].Trim('(');
+                    int value = Int32.Parse(line.Split(')')[1]);
+
+                    Tuple<int, int, int, int, int, string> newTuple = Tuple.Create(Int32.Parse(tuple.Split(' ')[0].Trim(',')), Int32.Parse(tuple.Split(' ')[1].Trim(',')), Int32.Parse(tuple.Split(' ')[2].Trim(',')), Int32.Parse(tuple.Split(' ')[3].Trim(',')), Int32.Parse(tuple.Split(' ')[4].Trim(',')), tuple.Split(' ')[5].ToString().Trim());
+                    this._N.Add(newTuple, value);
+                    //d.Add(line, sr.ReadLine());
+                }
+            }
+
+            //this._N = new Dictionary<Tuple<int, int, int, int, int, string>, int>();
         }
 
         public double LearningConstant

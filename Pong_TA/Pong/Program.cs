@@ -36,22 +36,24 @@ namespace Pong
             int totalTrials = 600000;
             double learningConstant = 30; //30
             double discountFactor = .9;  //.4
-            int explorationLimit = 1; //300
+            int explorationLimit = 15; //300
 
             Ball initialBall = new Ball(GlobalValues.InitialBallX, GlobalValues.InitialBallY, GlobalValues.InitialVelocityX, GlobalValues.InitialVelocityY, GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, false);
             Player rP = new Player(1, 0.5 - (GlobalValues.PaddleHeight / 2), learningConstant, discountFactor, Tuple.Create(initialBall.DiscreteBallX, initialBall.DiscreteBallY, initialBall.DiscreteVelocityX, initialBall.DiscreteVelocityY, (int)Math.Floor(GlobalValues.DiscreteBoardY * (0.5 - (GlobalValues.PaddleHeight / 2)) / (1 - GlobalValues.PaddleHeight))), GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, explorationLimit);
 
-            //rP.Memory = ReadQ(@"C:\Users\mabiscoc\Documents\Visual Studio 2013\Projects\SaveDictionary\SaveDictionary\Q.txt");
-            //rP.MemoryVisited = ReadN(@"C:\Users\mabiscoc\Documents\Visual Studio 2013\Projects\SaveDictionary\SaveDictionary\N.txt");
+            //rP.Memory = ReadQ(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Q_J.txt");
+            //rP.MemoryVisited = ReadN(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\N2.txt");
 
             int maxDeflections = 0;
             int totalTrialLength = 0;
+            List<int> last10 = new List<int>();
 
             DateTime start = DateTime.Now;
             for (int numTrial = 0; numTrial < totalTrials; numTrial++)
             {
-                Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q.txt");
-                Write(rP.MemoryVisited, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\N.txt");
+                ////Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q.txt", numTrial, rP.TotalTrialDeflections, rP.GamesPlayed);
+                Write(rP.Memory, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\Q2.txt");
+                Write(rP.MemoryVisited, @"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Pong_TA\Pong\N2.txt");
 
                 // initial state of the ball
                 Ball b = new Ball(GlobalValues.InitialBallX, GlobalValues.InitialBallY, GlobalValues.InitialVelocityX, GlobalValues.InitialVelocityY, GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, false);
@@ -85,7 +87,7 @@ namespace Pong
                     b.MoveBall();
                     currentStateTuple = Tuple.Create(b.BallX, b.BallY, b.VelocityX, b.VelocityY, rP.PaddleY);
 
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
                     if (goalState(currentStateTuple, rP, null))
                     {
                         if (deflectionDetected(currentStateTuple, prevStateTuple, rP, null, b))
@@ -162,7 +164,7 @@ namespace Pong
                     }
 
                     // Draw Board
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
 
                     //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial);
                     // Right Player Makes Decision
@@ -172,7 +174,7 @@ namespace Pong
                     //b.MoveBall();
 
                     rP.MoveRightPaddle(b);
-                    DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
+                    //DrawPong(GlobalValues.DiscreteBoardX, GlobalValues.DiscreteBoardY, null, rP, b, numTrial, trialIterations);
 
                     rP.tdUpdate3(b, prevStateTuple, currentStateTuple);
 
@@ -210,6 +212,18 @@ namespace Pong
                 {
                     maxDeflections = rP.Deflections;
                 }
+                try
+                {
+                    if (last10.Count >= 1000)
+                    {
+                        last10.RemoveAt(0);
+                    }
+                    last10.Add(rP.Deflections);
+                }
+                catch
+                {
+                    last10.Add(rP.Deflections);
+                }
                 totalTrialLength = totalTrialLength + trialIterations;
                 rP.TotalTrialDeflections = rP.TotalTrialDeflections + rP.Deflections;
                 Console.WriteLine("*********************************");
@@ -217,6 +231,8 @@ namespace Pong
                 Console.WriteLine("Trial Length: " + trialIterations);
                 Console.WriteLine("Number of deflections: " + rP.Deflections);
                 Console.WriteLine("Avg Trial number of deflections: " + (double)rP.TotalTrialDeflections / rP.GamesPlayed);
+                Console.WriteLine("Last 1000 Avg Trial number of deflections: " + (double)last10.Average());
+
                 Console.WriteLine("Avg Trial length: " + (double)totalTrialLength / rP.GamesPlayed);
                 if ((double)rP.TotalTrialDeflections / rP.GamesPlayed > 9)
                 {
@@ -682,18 +698,25 @@ namespace Pong
             Console.WriteLine("Number of Agent Deflections: " + rPlayer.Deflections);
         }
 
+        //static void Write(Dictionary<Tuple<int, int, int, int, int, string>, double> dictionary, string file, int numTrial, int totalDeflections, int gamesPlayed)
         static void Write(Dictionary<Tuple<int, int, int, int, int, string>, double> dictionary, string file)
         {
-            using (StreamWriter f = new StreamWriter(file))
+            using (StreamWriter f = new StreamWriter(file, false))
+            {
+                //f.WriteLine("numTrial" + numTrial);
+                //f.WriteLine("totalDeflections" + totalDeflections);
+                //f.WriteLine("gamesPlayed" + gamesPlayed);
+
                 foreach (var entry in dictionary)
                 {
                     f.WriteLine("{0} {1}", entry.Key, entry.Value);
                 }
+            }
         }
 
         static void Write(Dictionary<Tuple<int, int, int, int, int, string>, int> dictionary, string file)
         {
-            using (StreamWriter f = new StreamWriter(file))
+            using (StreamWriter f = new StreamWriter(file,false))
                 foreach (var entry in dictionary)
                 {
                     f.WriteLine("{0} {1}", entry.Key, entry.Value);

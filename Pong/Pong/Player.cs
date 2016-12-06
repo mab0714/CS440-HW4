@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Pong
 {
@@ -54,8 +55,42 @@ namespace Pong
             this._gamesPlayed = 0;
             this._gamesLost = 0;
             this._Q = new Dictionary<Tuple<int, int, int, int, int, string>, double>();
-            //this._Q = new Dictionary<Tuple<int, int, int, int, int>, double>();
+
+            //using (var sr = new StreamReader(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\Q2.txt"))
+            //{
+            //    string line = null;
+
+            //    // while it reads a key
+            //    while ((line = sr.ReadLine()) != null)
+            //    {
+            //        string tuple = line.Split(')')[0].Trim('(');
+            //        double value = Double.Parse(line.Split(')')[1]);
+
+            //        Tuple<int, int, int, int, int, string> newTuple = Tuple.Create(Int32.Parse(tuple.Split(',')[0]), Int32.Parse(tuple.Split(',')[1]), Int32.Parse(tuple.Split(',')[2]), Int32.Parse(tuple.Split(',')[3]), Int32.Parse(tuple.Split(',')[4]), tuple.Split(',')[5].ToString().Trim());
+            //        this._Q.Add(newTuple, value);
+            //        //d.Add(line, sr.ReadLine());
+            //    }
+            //}
             this._N = new Dictionary<Tuple<int, int, int, int, int, string>, int>();
+
+            //using (var sr = new StreamReader(@"I:\Backup\Masters\UIUC\2016\Fall\CS_440\Homework\4\CS440-HW4\N2.txt"))
+            //{
+            //    string line = null;
+
+            //    // while it reads a key
+            //    while ((line = sr.ReadLine()) != null)
+            //    {
+            //        string tuple = line.Split(')')[0].Trim('(');
+            //        int value = Int32.Parse(line.Split(')')[1]);
+
+            //        Tuple<int, int, int, int, int, string> newTuple = Tuple.Create(Int32.Parse(tuple.Split(' ')[0].Trim(',')), Int32.Parse(tuple.Split(' ')[1].Trim(',')), Int32.Parse(tuple.Split(' ')[2].Trim(',')), Int32.Parse(tuple.Split(' ')[3].Trim(',')), Int32.Parse(tuple.Split(' ')[4].Trim(',')), tuple.Split(' ')[5].ToString());
+            //        this._N.Add(newTuple, value);
+            //        //d.Add(line, sr.ReadLine());
+            //    }
+            //}
+
+            //this._Q = new Dictionary<Tuple<int, int, int, int, int>, double>();
+            //this._N = new Dictionary<Tuple<int, int, int, int, int, string>, int>();
         }
 
         public double LearningConstant
@@ -149,18 +184,28 @@ namespace Pong
 
         public void MoveLeftPaddle(Ball b)
         {
-            if (this._paddleY < b.BallY)
+            if (this._paddleY - GlobalValues.PaddleHeight/2 < b.BallY)
             {
                 this.PaddleY += 0.02;
+                if (this._paddleY > 1 - GlobalValues.PaddleHeight)
+                {
+                    this._paddleY = 1 - GlobalValues.PaddleHeight;
+                    this._discretePaddleY = this._boardY - 1;
+                }
             }
-            else if (this._paddleY > b.BallY)
+            else if (this._paddleY - GlobalValues.PaddleHeight / 2 > b.BallY)
             {
                 this.PaddleY -= 0.02;
+                if (this._paddleY < 0)
+                {
+                    this._paddleY = 0;
+                }
             }
             else
             {
                 this.PaddleY = this.PaddleY;
             }
+
             this._discretePaddleY = getDiscretePaddleY();
         }
 
@@ -1514,6 +1559,7 @@ namespace Pong
         public int getDiscretePaddleY()
         {
             this._discretePaddleY = Math.Min((Int32)Math.Floor(this._boardY * this._paddleY / (1 - this._paddleHeight)), this._boardY-1);
+            //this._discretePaddleY = Math.Min((Int32)Math.Floor(this._boardY * (this._paddleY - 0) / (1 - 0)), this._boardY - 1);
             return this._discretePaddleY;
         }
 
