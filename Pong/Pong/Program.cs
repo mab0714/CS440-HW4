@@ -190,7 +190,10 @@ namespace Pong
 
                     rP.tdUpdate3(b, prevStateTuple, currentStateTuple);
 
-
+                    if (Math.Abs(b.VelocityX) < 0.03)
+                    {
+                        ;
+                    }
 
                     //// Current Discrete Values
                     //int currDiscreteBallX = b.DiscreteBallX;
@@ -226,7 +229,7 @@ namespace Pong
                 }
                 try
                 {
-                    if (last10.Count >= 10)
+                    if (last10.Count >= 1000)
                     {
                         last10.RemoveAt(0);
                     }
@@ -243,7 +246,7 @@ namespace Pong
                 Console.WriteLine("Trial Length: " + trialIterations);
                 Console.WriteLine("Number of deflections: " + rP.Deflections);
                 Console.WriteLine("Avg Trial number of deflections: " + (double)rP.TotalTrialDeflections / rP.GamesPlayed);
-                Console.WriteLine("Last 10 Avg Trial number of deflections: " + (double)last10.Average());
+                Console.WriteLine("Last 1000 Avg Trial number of deflections: " + (double)last10.Average());
 
                 Console.WriteLine("Avg Trial length: " + (double)totalTrialLength / rP.GamesPlayed);
                 if ((double)rP.TotalTrialDeflections / rP.GamesPlayed > 9)
